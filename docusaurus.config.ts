@@ -81,6 +81,9 @@ const config: Config = {
     // Enable LLM-compatible markdown endpoints (e.g., /page.md returns raw markdown)
     // See: https://github.com/0gfoundation/0g-doc/issues/242
     require.resolve('./src/plugins/markdown-endpoint-plugin'),
+    // Dev-only: mount /api/chat endpoint for the Ask-AI widget. In production
+    // Vercel serves the same handler from api/chat.js.
+    require.resolve('./src/plugins/ask-ai-dev-plugin'),
     // Generate llms.txt and llms-full.txt for AI tools (industry standard)
     // See: https://llmstxt.org/
     [

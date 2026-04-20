@@ -3,6 +3,51 @@ import ReactMarkdown from 'react-markdown';
 import useIsBrowser from '@docusaurus/useIsBrowser';
 import styles from './styles.module.css';
 
+function CodeBlock({ className, children }: { className?: string; children?: React.ReactNode }) {
+  const [copied, setCopied] = useState(false);
+  const lang = (className || '').replace(/^language-/, '') || 'code';
+  const text = React.Children.toArray(children)
+    .map((c) => (typeof c === 'string' ? c : ''))
+    .join('');
+  const copy = async () => {
+    try {
+      await navigator.clipboard.writeText(text.replace(/\n$/, ''));
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1200);
+    } catch {}
+  };
+  return (
+    <div className={styles.codeBlock}>
+      <div className={styles.codeBlockHeader}>
+        <span className={styles.codeLang}>{lang}</span>
+        <button className={styles.codeCopyBtn} onClick={copy} aria-label={copied ? 'Copied' : 'Copy code'}>
+          {copied ? '✓ copied' : '⧉ copy'}
+        </button>
+      </div>
+      <pre>
+        <code className={className}>{children}</code>
+      </pre>
+    </div>
+  );
+}
+
+const MARKDOWN_COMPONENTS = {
+  code({ className, children, ...props }: any) {
+    const isBlock = /language-/.test(className || '');
+    if (!isBlock) {
+      return (
+        <code className={className} {...props}>
+          {children}
+        </code>
+      );
+    }
+    return <CodeBlock className={className}>{children}</CodeBlock>;
+  },
+  pre({ children }: any) {
+    return <>{children}</>;
+  },
+};
+
 type Role = 'user' | 'assistant';
 type Msg = { role: Role; content: string; chatId?: string };
 type LinkCard = { path: string; title: string; description?: string };
@@ -20,6 +65,24 @@ const MIN_PANEL = { w: 320, h: 420 };
 const MAX_PANEL = { w: 720, h: 900 };
 const DEFAULT_PANEL = { w: 380, h: 560 };
 const SIZE_KEY = 'askai:panelSize';
+const COACH_KEY = 'askai:coached';
+const COACH_STEPS = [
+  {
+    title: 'Ask the 0G AI',
+    body: 'Press ⌘K (Ctrl+K on Windows) or click here anytime to ask about any docs page.',
+    placement: 'fab' as const,
+  },
+  {
+    title: 'I know this page',
+    body: 'I read the page you are on, so you can ask specific questions like "explain this in one sentence."',
+    placement: 'header' as const,
+  },
+  {
+    title: 'If I get it wrong',
+    body: 'Use "Still stuck? Open a GitHub issue" to escalate with the transcript pre-filled.',
+    placement: 'footer' as const,
+  },
+];
 
 function extractPageTitle(markdown: string | null): string | null {
   if (!markdown) return null;
@@ -193,7 +256,8 @@ function AssistantBubble({
       {msg.content ? (
         <>
           <div className={shouldCollapse ? styles.collapsed : undefined}>
-            <ReactMarkdown>{msg.content}</ReactMarkdown>
+            <ReactMarkdown components={MARKDOWN_COMPONENTS}>{msg.content}</ReactMarkdown>
+            {isStreaming && <span className={styles.cursor} aria-hidden="true" />}
           </div>
           {shouldCollapse && (
             <button className={styles.showMore} onClick={() => setExpanded(true)}>
@@ -252,6 +316,14 @@ function AskAIInner() {
   const [suggestions, setSuggestions] = useState<string[]>([]);
   const [pageTitle, setPageTitle] = useState<string | null>(null);
   const [shaking, setShaking] = useState(false);
+  const [coachStep, setCoachStep] = useState<number>(() => {
+    if (typeof window === 'undefined') return -1;
+    try {
+      return window.localStorage.getItem(COACH_KEY) === '1' ? -1 : 0;
+    } catch {
+      return -1;
+    }
+  });
   const [size, setSize] = useState(() => {
     if (typeof window === 'undefined') return DEFAULT_PANEL;
     try {
@@ -320,6 +392,35 @@ function AskAIInner() {
       window.localStorage.setItem(SIZE_KEY, JSON.stringify(size));
     } catch {}
   }, [size]);
+
+  useEffect(() => {
+    if (coachStep === 0 && open) setCoachStep(1);
+  }, [open, coachStep]);
+
+  useEffect(() => {
+    if (coachStep !== 1) return;
+    if (messages.some((m) => m.role === 'user')) setCoachStep(2);
+  }, [messages, coachStep]);
+
+  const dismissCoach = useCallback(() => {
+    setCoachStep(-1);
+    try {
+      window.localStorage.setItem(COACH_KEY, '1');
+    } catch {}
+  }, []);
+
+  const advanceCoach = useCallback(() => {
+    setCoachStep((s) => {
+      const next = s + 1;
+      if (next >= COACH_STEPS.length) {
+        try {
+          window.localStorage.setItem(COACH_KEY, '1');
+        } catch {}
+        return -1;
+      }
+      return next;
+    });
+  }, []);
 
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
@@ -453,6 +554,23 @@ function AskAIInner() {
     abortRef.current?.abort();
   }, []);
 
+  const editMessage = useCallback(
+    (idx: number) => {
+      if (sending) return;
+      const target = messages[idx];
+      if (!target || target.role !== 'user') return;
+      setMessages(messages.slice(0, idx));
+      setInput(target.content);
+      setTimeout(() => {
+        const el = textareaRef.current;
+        if (!el) return;
+        el.focus();
+        el.setSelectionRange(target.content.length, target.content.length);
+      }, 0);
+    },
+    [messages, sending],
+  );
+
   const regenerate = useCallback(() => {
     if (sending) return;
     const withoutLastAssistant = (() => {
@@ -563,9 +681,16 @@ function AskAIInner() {
                 );
               }
               return (
-                <div key={i} className={styles.userMsg}>
+                <button
+                  key={i}
+                  className={styles.userMsg}
+                  onClick={() => editMessage(i)}
+                  disabled={sending}
+                  title="Click to edit and resend"
+                >
                   {m.content}
-                </div>
+                  <span className={styles.userEditHint}>✎ edit</span>
+                </button>
               );
             })}
             {showInitialSuggestions && (
@@ -635,6 +760,27 @@ function AskAIInner() {
             </button>
           </div>
       </div>
+      {coachStep >= 0 && COACH_STEPS[coachStep] && (
+        <div
+          className={`${styles.coach} ${styles[`coach_${COACH_STEPS[coachStep].placement}`]}`}
+          role="dialog"
+          aria-label="Tour step"
+        >
+          <div className={styles.coachTitle}>{COACH_STEPS[coachStep].title}</div>
+          <div className={styles.coachBody}>{COACH_STEPS[coachStep].body}</div>
+          <div className={styles.coachActions}>
+            <button className={styles.coachSkip} onClick={dismissCoach}>
+              Skip
+            </button>
+            <span className={styles.coachProgress}>
+              {coachStep + 1} / {COACH_STEPS.length}
+            </span>
+            <button className={styles.coachNext} onClick={advanceCoach}>
+              {coachStep + 1 === COACH_STEPS.length ? 'Done' : 'Next'}
+            </button>
+          </div>
+        </div>
+      )}
     </>
   );
 }

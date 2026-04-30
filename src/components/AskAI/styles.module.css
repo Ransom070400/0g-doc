@@ -28,9 +28,25 @@
 }
 
 .fabLogo {
+  display: block;
+  height: 22px;
+  width: auto;
+}
+
+.fabLogoLight {
+  display: block;
+}
+.fabLogoDark {
+  display: none;
+}
+
+[data-theme='dark'] .fabLogoLight {
+  display: none;
+}
+[data-theme='dark'] .fabLogoDark {
+  display: block;
   width: 26px;
   height: 26px;
-  display: block;
 }
 
 .fabText {
@@ -55,9 +71,25 @@
 }
 
 .headerLogo {
+  flex-shrink: 0;
+  height: 18px;
+  width: auto;
+}
+
+.headerLogoLight {
+  display: block;
+}
+.headerLogoDark {
+  display: none;
+}
+
+[data-theme='dark'] .headerLogoLight {
+  display: none;
+}
+[data-theme='dark'] .headerLogoDark {
+  display: block;
   width: 22px;
   height: 22px;
-  flex-shrink: 0;
 }
 
 [data-theme='dark'] .fab {

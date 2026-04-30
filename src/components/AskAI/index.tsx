@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import ReactMarkdown from 'react-markdown';
 import useIsBrowser from '@docusaurus/useIsBrowser';
+import Link from '@docusaurus/Link';
 import styles from './styles.module.css';
 
 function CodeBlock({ className, children }: { className?: string; children?: React.ReactNode }) {
@@ -45,6 +46,21 @@ const MARKDOWN_COMPONENTS = {
   },
   pre({ children }: any) {
     return <>{children}</>;
+  },
+  a({ href, children, ...props }: any) {
+    const isInternal = typeof href === 'string' && href.startsWith('/') && !href.startsWith('//');
+    if (isInternal) {
+      return (
+        <Link to={href} {...props}>
+          {children}
+        </Link>
+      );
+    }
+    return (
+      <a href={href} target="_blank" rel="noreferrer noopener" {...props}>
+        {children}
+      </a>
+    );
   },
 };
 
@@ -295,11 +311,11 @@ function AssistantBubble({
         <div className={styles.cardList}>
           <div className={styles.cardListLabel}>Related pages</div>
           {cards.map((c) => (
-            <a key={c.path} className={styles.card} href={c.path}>
+            <Link key={c.path} className={styles.card} to={c.path}>
               <div className={styles.cardTitle}>{c.title}</div>
               {c.description && <div className={styles.cardDesc}>{c.description}</div>}
               <div className={styles.cardPath}>{c.path}</div>
-            </a>
+            </Link>
           ))}
         </div>
       )}
@@ -616,10 +632,16 @@ function AskAIInner() {
         ) : (
           <>
             <img
+              src="/img/0G-Logo-Light.svg"
+              alt=""
+              aria-hidden="true"
+              className={`${styles.fabLogo} ${styles.fabLogoLight}`}
+            />
+            <img
               src="/img/0G-Logo-Dark.svg"
               alt=""
               aria-hidden="true"
-              className={styles.fabLogo}
+              className={`${styles.fabLogo} ${styles.fabLogoDark}`}
             />
             <span className={styles.fabText}>Ask AI</span>
           </>
@@ -641,10 +663,16 @@ function AskAIInner() {
         <div className={styles.header}>
           <div className={styles.headerTitle}>
             <img
+              src="/img/0G-Logo-Light.svg"
+              alt=""
+              aria-hidden="true"
+              className={`${styles.headerLogo} ${styles.headerLogoLight}`}
+            />
+            <img
               src="/img/0G-Logo-Dark.svg"
               alt=""
               aria-hidden="true"
-              className={styles.headerLogo}
+              className={`${styles.headerLogo} ${styles.headerLogoDark}`}
             />
             <div>
               <strong>Ask 0G AI</strong>

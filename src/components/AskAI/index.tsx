@@ -68,7 +68,7 @@ type Role = 'user' | 'assistant';
 type Msg = { role: Role; content: string; chatId?: string };
 type LinkCard = { path: string; title: string; description?: string };
 
-const GH_REPO = '0gfoundation/0g-doc';
+const TG_HELP_URL = 'https://t.me/zgcommunity';
 const WELCOME: Msg = {
   role: 'assistant',
   content:
@@ -95,7 +95,7 @@ const COACH_STEPS = [
   },
   {
     title: 'If I get it wrong',
-    body: 'Use "Still stuck? Open a GitHub issue" to escalate with the transcript pre-filled.',
+    body: 'Use "Still stuck? Get real help on TG" to chat with the 0G community for hands-on support.',
     placement: 'footer' as const,
   },
 ];
@@ -202,28 +202,6 @@ async function fetchLinkCard(path: string): Promise<LinkCard | null> {
   }
   if (!title) title = path;
   return { path, title, description };
-}
-
-function openGithubIssue(messages: Msg[], pageUrl: string) {
-  const transcript = messages
-    .filter((m) => m.role === 'user' || m.role === 'assistant')
-    .map((m) => `**${m.role === 'user' ? 'You' : 'Assistant'}:** ${m.content}`)
-    .join('\n\n');
-  const body = [
-    `### Page`,
-    pageUrl,
-    '',
-    `### What I was trying to do`,
-    '<!-- Describe the bug or question -->',
-    '',
-    `### Chat transcript`,
-    transcript || '_(no messages)_',
-  ].join('\n');
-  const url = new URL(`https://github.com/${GH_REPO}/issues/new`);
-  url.searchParams.set('title', 'Docs: unresolved question from Ask-AI');
-  url.searchParams.set('body', body);
-  url.searchParams.set('labels', 'docs,ask-ai');
-  window.open(url.toString(), '_blank', 'noopener');
 }
 
 function AssistantBubble({
@@ -780,12 +758,14 @@ function AskAIInner() {
                 ↻ Regenerate
               </button>
             )}
-            <button
+            <a
               className={styles.linkBtn}
-              onClick={() => openGithubIssue(messages, window.location.href)}
+              href={TG_HELP_URL}
+              target="_blank"
+              rel="noreferrer noopener"
             >
-              Still stuck? Open a GitHub issue →
-            </button>
+              Still stuck? Get real help on TG →
+            </a>
           </div>
       </div>
       {coachStep >= 0 && COACH_STEPS[coachStep] && (

@@ -37,9 +37,9 @@ const DAILY_SPEND_CAP_OG = process.env.ASK_AI_DAILY_SPEND_CAP_OG
   : Infinity;
 const PRICE_IN_PER_1M = Number(process.env.ASK_AI_PRICE_IN_PER_1M || 0.8);
 const PRICE_OUT_PER_1M = Number(process.env.ASK_AI_PRICE_OUT_PER_1M || 4.8);
-const MAX_OUTPUT_TOKENS = 512;
-const MAX_MESSAGE_CHARS = Number(process.env.ASK_AI_MAX_MESSAGE_CHARS || 4000);
-const MAX_PAGE_CONTEXT_CHARS = Number(process.env.ASK_AI_MAX_PAGE_CONTEXT_CHARS || 8000);
+const MAX_OUTPUT_TOKENS = Number(process.env.ASK_AI_MAX_OUTPUT_TOKENS || 4096);
+const MAX_MESSAGE_CHARS = Number(process.env.ASK_AI_MAX_MESSAGE_CHARS || 8000);
+const MAX_PAGE_CONTEXT_CHARS = Number(process.env.ASK_AI_MAX_PAGE_CONTEXT_CHARS || 16000);
 
 const DEFAULT_ALLOWED_ORIGINS = [
   'https://docs.0g.ai',
@@ -336,7 +336,7 @@ async function handleChat(req, res) {
         model,
         messages: payloadMessages,
         temperature: 0.2,
-        max_tokens: 512,
+        max_tokens: MAX_OUTPUT_TOKENS,
         stream: true,
       }),
     });
